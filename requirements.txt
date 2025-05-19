@@ -1,0 +1,5 @@
+Flask==2.3.3
+Flask-Cors==4.0.0
+twilio==8.5.0
+gunicorn==21.2.0        # Render uses this for production
+python-dotenv==1.0.0
