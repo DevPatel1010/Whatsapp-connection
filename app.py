@@ -10,8 +10,8 @@ if os.getenv("FLASK_ENV") != "production":
 # ──────────────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
-# Allow only Framer’s domain in prod; keep * while testing
-CORS(app, resources={r"/send-whatsapp": {"origins": "*"}})
+# Enable CORS for all routes to make sure the API is accessible
+CORS(app)
 
 # Twilio credentials + numbers from env-vars
 account_sid = os.environ["TWILIO_ACCOUNT_SID"]
@@ -27,21 +27,41 @@ def index():                     # LOCAL browser test only
 @app.route("/send-whatsapp", methods=["POST"])
 def send_whatsapp():
     data = request.json or {}
+    
+    # Log incoming request data for debugging
+    print(f"Received request data: {data}")
+    
+    name = data.get("name", "")
+    email = data.get("email", "")
     body = data.get("message", "").strip()
 
     if not body:
         return jsonify(success=False, message="Message is required"), 400
 
     try:
+        # Include name and email in the message if provided
+        message_text = body
+        if name:
+            message_text = f"From: {name}\n{message_text}"
+        if email:
+            message_text = f"{message_text}\nContact: {email}"
+            
         msg = client.messages.create(
             from_=twilio_from,
             to=whatsapp_to,
-            body=body
+            body=message_text
         )
         return jsonify(success=True, sid=msg.sid)
     except Exception as e:
+        print(f"Error sending WhatsApp message: {str(e)}")
         return jsonify(success=False, message=str(e)), 500
 
+# Add a health check endpoint
+@app.route("/health", methods=["GET"])
+def health_check():
+    return jsonify(status="ok")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=True)
+    port = int(os.getenv("PORT", 5000))
+    print(f"Starting server on port {port}")
+    app.run(host="0.0.0.0", port=port, debug=True)
