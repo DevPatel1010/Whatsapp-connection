@@ -24,8 +24,13 @@ client = Client(account_sid, auth_token)
 def index():                     # LOCAL browser test only
     return send_from_directory(".", "index.html")
 
-@app.route("/send-whatsapp", methods=["POST"])
+@app.route("/send-whatsapp", methods=["GET", "POST"])
 def send_whatsapp():
+    # For GET requests, return a simple status message
+    if request.method == "GET":
+        return jsonify(status="WhatsApp endpoint is active", message="Please use POST method to send messages")
+    
+    # Handle POST requests as before
     data = request.json or {}
     
     # Log incoming request data for debugging
