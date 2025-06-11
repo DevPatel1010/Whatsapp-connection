@@ -10,8 +10,8 @@ if os.getenv("FLASK_ENV") != "production":
 # ──────────────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
-# Enable CORS for all routes to make sure the API is accessible
-CORS(app)
+# Enable CORS specifically for your new Framer domain
+CORS(app, origins=["https://kwezyhq.framer.website"])
 
 # Twilio credentials + numbers from env-vars
 account_sid = os.environ["TWILIO_ACCOUNT_SID"]
@@ -24,8 +24,12 @@ client = Client(account_sid, auth_token)
 def index():                     # LOCAL browser test only
     return send_from_directory(".", "index.html")
 
-@app.route("/send-whatsapp", methods=["GET", "POST"])
+@app.route("/send-whatsapp", methods=["GET", "POST", "OPTIONS"])
 def send_whatsapp():
+    # Handle preflight requests (needed for CORS)
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
+    
     # For GET requests, return a simple status message
     if request.method == "GET":
         return jsonify(status="WhatsApp endpoint is active", message="Please use POST method to send messages")
@@ -69,4 +73,5 @@ def health_check():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     print(f"Starting server on port {port}")
+    print(f"CORS enabled for: https://kwezyhq.framer.website")
     app.run(host="0.0.0.0", port=port, debug=True)
