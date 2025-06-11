@@ -10,8 +10,12 @@ if os.getenv("FLASK_ENV") != "production":
 # ──────────────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
-# Enable CORS specifically for your new Framer domain
-CORS(app, origins=["https://kwezyhq.framer.website"])
+
+# FIXED: Enable CORS with proper configuration
+CORS(app, 
+     origins=["https://kwezyhq.framer.website"], 
+     methods=["GET", "POST", "OPTIONS"],
+     allow_headers=["Content-Type", "Accept", "Authorization"])
 
 # Twilio credentials + numbers from env-vars
 account_sid = os.environ["TWILIO_ACCOUNT_SID"]
@@ -26,9 +30,14 @@ def index():                     # LOCAL browser test only
 
 @app.route("/send-whatsapp", methods=["GET", "POST", "OPTIONS"])
 def send_whatsapp():
-    # Handle preflight requests (needed for CORS)
+    # FIXED: Handle preflight requests with proper headers
     if request.method == "OPTIONS":
-        return jsonify({"status": "ok"}), 200
+        response = jsonify({"status": "ok"})
+        response.headers.add("Access-Control-Allow-Origin", "https://kwezyhq.framer.website")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization")
+        response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        response.headers.add("Access-Control-Max-Age", "3600")
+        return response, 200
     
     # For GET requests, return a simple status message
     if request.method == "GET":
@@ -60,15 +69,38 @@ def send_whatsapp():
             to=whatsapp_to,
             body=message_text
         )
-        return jsonify(success=True, sid=msg.sid)
+        
+        # FIXED: Add proper CORS headers to response
+        response = jsonify(success=True, sid=msg.sid)
+        response.headers.add("Access-Control-Allow-Origin", "https://kwezyhq.framer.website")
+        return response
+        
     except Exception as e:
         print(f"Error sending WhatsApp message: {str(e)}")
-        return jsonify(success=False, message=str(e)), 500
+        
+        # FIXED: Add proper CORS headers to error response
+        response = jsonify(success=False, message=str(e))
+        response.headers.add("Access-Control-Allow-Origin", "https://kwezyhq.framer.website")
+        return response, 500
 
 # Add a health check endpoint
 @app.route("/health", methods=["GET"])
 def health_check():
-    return jsonify(status="ok")
+    response = jsonify(status="ok")
+    response.headers.add("Access-Control-Allow-Origin", "https://kwezyhq.framer.website")
+    return response
+
+# FIXED: Add test endpoint with CORS headers
+@app.route("/test", methods=["GET"])
+def test_endpoint():
+    response = jsonify(
+        status="success", 
+        message="WhatsApp API is working",
+        endpoint="https://whatsapp-api-rjd7.onrender.com/send-whatsapp",
+        allowed_origin="https://kwezyhq.framer.website"
+    )
+    response.headers.add("Access-Control-Allow-Origin", "https://kwezyhq.framer.website")
+    return response
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
