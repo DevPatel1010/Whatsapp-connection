@@ -47,22 +47,39 @@ def send_whatsapp():
     data = request.json or {}
     
     # Log incoming request data for debugging
-    print(f"Received request data: {data}")
+    print(f"🔍 Received request data: {data}")
     
-    name = data.get("name", "")
-    email = data.get("email", "")
+    # Get data with better empty value handling
+    name = data.get("name", "").strip()
+    email = data.get("email", "").strip()
     body = data.get("message", "").strip()
+    
+    # Log individual fields for debugging
+    print(f"📋 Parsed fields - Name: '{name}', Email: '{email}', Message: '{body}'")
 
     if not body:
+        print("❌ No message provided")
         return jsonify(success=False, message="Message is required"), 400
 
     try:
-        # Include name and email in the message if provided
-        message_text = body
+        # Create clean message format - only show provided values
+        message_text = "📝 New Contact Form Submission\n\n"
+        
+        # Only add name if it's provided and not empty
         if name:
-            message_text = f"From: {name}\n{message_text}"
+            message_text += f"👤 Name: {name}\n"
+        else:
+            message_text += "👤 Name: Not provided\n"
+            
+        # Only add email if it's provided and not empty  
         if email:
-            message_text = f"{message_text}\nContact: {email}"
+            message_text += f"📧 Email: {email}\n"
+        else:
+            message_text += "📧 Email: Not provided\n"
+            
+        message_text += f"💬 Message: {body}"
+        
+        print(f"📱 Sending WhatsApp message: {message_text}")
             
         msg = client.messages.create(
             from_=twilio_from,
@@ -90,14 +107,15 @@ def health_check():
     response.headers.add("Access-Control-Allow-Origin", "https://kwezyhq.framer.website")
     return response
 
-# FIXED: Add test endpoint with CORS headers
-@app.route("/test", methods=["GET"])
+# FIXED: Add test endpoint with CORS headers - accepts both GET and POST
+@app.route("/test", methods=["GET", "POST"])
 def test_endpoint():
     response = jsonify(
         status="success", 
         message="WhatsApp API is working",
         endpoint="https://whatsapp-api-rjd7.onrender.com/send-whatsapp",
-        allowed_origin="https://kwezyhq.framer.website"
+        allowed_origin="https://kwezyhq.framer.website",
+        method_used=request.method
     )
     response.headers.add("Access-Control-Allow-Origin", "https://kwezyhq.framer.website")
     return response
